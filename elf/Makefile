@@ -215,9 +215,9 @@ extra-objs	+= $(sln-modules:=.o)
 
 ifeq (yes,$(use-ldconfig))
 ifeq (yes,$(build-shared))
-others-static	+= ldconfig
-others		+= ldconfig
-install-rootsbin += ldconfig
+#others-static	+= ldconfig
+#others		+= ldconfig
+#install-rootsbin += ldconfig
 
 ldconfig-modules := \
   cache \

@@ -78,11 +78,15 @@ ENTRY (__clone)
 	/* End FDE now, because in the child the unwind info will be
 	   wrong.  */
 	cfi_endproc;
-	syscall
+
+        sub $0x8, %rsp
+        call *(SYSTBL_NAME_ADDR(clone))
 
 	testq	%rax,%rax
 	jl	SYSCALL_ERROR_LABEL
 	jz	L(thread_start)
+
+	add $0x8, %rsp
 
 	ret
 

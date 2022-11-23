@@ -52,7 +52,7 @@
 /* Support for inter-process robust mutexes was added in 2.6.17 (but
    some architectures lack futex_atomic_cmpxchg_inatomic in some
    configurations).  */
-#define __ASSUME_SET_ROBUST_LIST	1
+//#define __ASSUME_SET_ROBUST_LIST	1
 
 /* Support for various CLOEXEC and NONBLOCK flags was added in
    2.6.27.  */

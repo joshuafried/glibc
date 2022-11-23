@@ -51,18 +51,18 @@ ENTRY (__clone3)
 	   syscall.  */
 	mov	%RCX_LP, %R8_LP
 
-	/* Do the system call.  */
-	movl	$SYS_ify(clone3), %eax
-
 	/* End FDE now, because in the child the unwind info will be
 	   wrong.  */
 	cfi_endproc
-	syscall
+
+	sub $0x8, %rsp
+	call *(SYSTBL_NAME_ADDR(clone3))
 
 	test	%RAX_LP, %RAX_LP
 	jl	SYSCALL_ERROR_LABEL
 	jz	L(thread_start)
 
+	add $0x8, %rsp;
 	ret
 
 L(thread_start):
@@ -74,12 +74,14 @@ L(thread_start):
 	xorl	%ebp, %ebp
 
 	/* Set up arguments for the function call.  */
-	mov	%R8_LP, %RDI_LP	/* Argument.  */
+	mov     %R8_LP, %RDI_LP /* Argument.  */
 	call	*%rdx		/* Call function.  */
 	/* Call exit with return value from function call. */
 	movq	%rax, %rdi
-	movl	$SYS_ify(exit), %eax
-	syscall
+
+	and	$-16, %RSP_LP
+	call *(SYSTBL_NAME_ADDR(exit))
+
 	cfi_endproc
 
 	cfi_startproc

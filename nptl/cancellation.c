@@ -29,6 +29,7 @@
 int
 __pthread_enable_asynccancel (void)
 {
+  return 0;
   struct pthread *self = THREAD_SELF;
   int oldval = atomic_load_relaxed (&self->cancelhandling);
 
@@ -61,6 +62,8 @@ libc_hidden_def (__pthread_enable_asynccancel)
 void
 __pthread_disable_asynccancel (int oldtype)
 {
+  return;
+
   /* If asynchronous cancellation was enabled before we do not have
      anything to do.  */
   if (oldtype & CANCELTYPE_BITMASK)

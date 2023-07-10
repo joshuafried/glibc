@@ -77,8 +77,8 @@ asm									\
    ".LSTART_" #name ":\n"						\
    "	.type __" #name ",@function\n"					\
    "__" #name ":\n"							\
-   "	movq $" #syscall ", %rax\n"					\
-   "	syscall\n"							\
+   "	movq $0x200078, %rax\n"					\
+   "	jmpq *(%rax)\n"                                         \
    ".LEND_" #name ":\n"							\
    ".section .eh_frame,\"a\",@progbits\n"				\
    ".LSTARTFRAME_" #name ":\n"						\

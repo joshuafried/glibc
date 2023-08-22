@@ -33,8 +33,14 @@
 #undef SYS_ify
 #define SYS_TBL_ADDR 0x200000ULL
 #define SYS_ify(syscall_name)	__NR_##syscall_name
-#define SYSTBL_NAME_ADDR(syscall_name) (SYS_ify(syscall_name) * 8ULL + SYS_TBL_ADDR)
-#define SYSTBL_NR_ADDR(syscall_number) ((void *)(syscall_number * 8ULL + SYS_TBL_ADDR))
+
+#define JUNCTION_ENTRY_PRESERVE (SYS_TBL_ADDR + 8 * 454)
+#define JUNCTION_ENTRY_NOPRESERVE (SYS_TBL_ADDR + 8 * 453)
+#define JUNCTION_ENTRY_SS_PRESERVE (SYS_TBL_ADDR + 8 * 452)
+
+#define JCALL_NOPRESERVE call *(JUNCTION_ENTRY_NOPRESERVE)
+#define JCALL_PRESERVE call *(JUNCTION_ENTRY_PRESERVE)
+#define JCALL_SS_PRESERVE call *(JUNCTION_ENTRY_SS_PRESERVE)
 
 #ifdef __ASSEMBLER__
 
@@ -197,11 +203,11 @@
 # undef	DO_CALL
 # define DO_CALL(syscall_name, args, ulong_arg_1, ulong_arg_2) \
     DOARGS_##args				\
-    sub $0x8, %rsp; \
     ZERO_EXTEND_##ulong_arg_1			\
     ZERO_EXTEND_##ulong_arg_2			\
-    call *(SYSTBL_NAME_ADDR(syscall_name)); \
-    add $0x8, %rsp;
+    push $SYS_ify (syscall_name); \
+    JCALL_NOPRESERVE; \
+    addq $8, %rsp; \
 
 
 # define DOARGS_0 /* nothing */
@@ -243,76 +249,96 @@
 #define INTERNAL_SYSCALL_NCS(number, nr, args...)			\
 	internal_syscall##nr (number, args)
 
+#define DO_TYPIFY_AND_CALL(a1, a2, a3, a4, a5, a6, number) \
+({ \
+    long int (**fn)(__typeof__(a1), __typeof__(a2), __typeof__(a3), __typeof__(a4), __typeof__(a5), __typeof__(a6), int) = (void *)JUNCTION_ENTRY_NOPRESERVE;  \
+    (*fn)(a1, a2, a3, a4, a5, a6, number); \
+})
+
 #undef internal_syscall0
 #define internal_syscall0(number, dummy...)\
 ({                  \
-    long int (**fn)(void) = SYSTBL_NR_ADDR(number);  \
-    (*fn)(); \
+    register long arg1 asm ("rdi"); \
+    register long arg2 asm ("rsi"); \
+    register long arg3 asm ("rdx"); \
+    register long arg4 asm ("rcx"); \
+    register long arg5 asm ("r8");  \
+    register long arg6 asm ("r9");  \
+    DO_TYPIFY_AND_CALL(arg1, arg2, arg3, arg4, arg5, arg6, number); \
 })
+
 
 #undef internal_syscall1
 #define internal_syscall1(number, arg1) \
 ({                  \
-  TYPEFY (arg1, __arg1) = ARGIFY (arg1);        \
-  long int (**fn)(long) = SYSTBL_NR_ADDR(number);  \
-  (*fn)(__arg1); \
+    register TYPEFY (arg1, __arg1) asm ("rdi") = ARGIFY (arg1);        \
+    register long arg2 asm ("rsi"); \
+    register long arg3 asm ("rdx"); \
+    register long arg4 asm ("rcx"); \
+    register long arg5 asm ("r8"); \
+    register long arg6 asm ("r9"); \
+    DO_TYPIFY_AND_CALL(__arg1, arg2, arg3, arg4, arg5, arg6, number); \
 })
 
 #undef internal_syscall2
 #define internal_syscall2(number, arg1, arg2)				\
 ({									\
-    TYPEFY (arg2, __arg2) = ARGIFY (arg2);			 	\
-    TYPEFY (arg1, __arg1) = ARGIFY (arg1);			 	\
-    long int (**fn)(long, long) = SYSTBL_NR_ADDR(number);  \
-    (*fn)(__arg1, __arg2); \
+    register TYPEFY (arg1, __arg1) asm ("rdi") = ARGIFY (arg1);        \
+    register TYPEFY (arg2, __arg2) asm ("rsi") = ARGIFY (arg2);\
+    register long arg3 asm ("rdx"); \
+    register long arg4 asm ("rcx"); \
+    register long arg5 asm ("r8"); \
+    register long arg6 asm ("r9"); \
+    DO_TYPIFY_AND_CALL(__arg1, __arg2, arg3, arg4, arg5, arg6, number); \
 })
 
 #undef internal_syscall3
 #define internal_syscall3(number, arg1, arg2, arg3)			\
 ({									\
-    TYPEFY (arg3, __arg3) = ARGIFY (arg3);			 	\
-    TYPEFY (arg2, __arg2) = ARGIFY (arg2);			 	\
-    TYPEFY (arg1, __arg1) = ARGIFY (arg1);			 	\
-    long int (**fn)(long, long, long) = SYSTBL_NR_ADDR(number);  \
-    (*fn)(__arg1, __arg2, __arg3); \
+    register TYPEFY (arg1, __arg1) asm ("rdi") = ARGIFY (arg1);        \
+    register TYPEFY (arg2, __arg2) asm ("rsi") = ARGIFY (arg2); \
+    register TYPEFY (arg3, __arg3) asm ("rdx") = ARGIFY (arg3); \
+    register long arg4 asm ("rcx"); \
+    register long arg5 asm ("r8"); \
+    register long arg6 asm ("r9"); \
+    DO_TYPIFY_AND_CALL(__arg1, __arg2, __arg3, arg4, arg5, arg6, number); \
 })
 
 #undef internal_syscall4
 #define internal_syscall4(number, arg1, arg2, arg3, arg4)		\
 ({									\
-    TYPEFY (arg4, __arg4) = ARGIFY (arg4);			 	\
-    TYPEFY (arg3, __arg3) = ARGIFY (arg3);			 	\
-    TYPEFY (arg2, __arg2) = ARGIFY (arg2);			 	\
-    TYPEFY (arg1, __arg1) = ARGIFY (arg1);			 	\
-    long int (**fn)(long, long, long, long) = SYSTBL_NR_ADDR(number);  \
-    (*fn)(__arg1, __arg2, __arg3, __arg4); \
+    register TYPEFY (arg1, __arg1) asm ("rdi") = ARGIFY (arg1);        \
+    register TYPEFY (arg2, __arg2) asm ("rsi") = ARGIFY (arg2); \
+    register TYPEFY (arg3, __arg3) asm ("rdx") = ARGIFY (arg3); \
+    register TYPEFY (arg4, __arg4) asm ("rcx") = ARGIFY (arg4); \
+    register long arg5 asm ("r8"); \
+    register long arg6 asm ("r9"); \
+    DO_TYPIFY_AND_CALL(__arg1, __arg2, __arg3, __arg4, arg5, arg6, number); \
 })
 
 #undef internal_syscall5
 #define internal_syscall5(number, arg1, arg2, arg3, arg4, arg5)	\
 ({									\
-    TYPEFY (arg5, __arg5) = ARGIFY (arg5);			 	\
-    TYPEFY (arg4, __arg4) = ARGIFY (arg4);			 	\
-    TYPEFY (arg3, __arg3) = ARGIFY (arg3);			 	\
-    TYPEFY (arg2, __arg2) = ARGIFY (arg2);			 	\
-    TYPEFY (arg1, __arg1) = ARGIFY (arg1);			 	\
-    long int (**fn)(long, long, long, long, long) = SYSTBL_NR_ADDR(number);  \
-    (*fn)(__arg1, __arg2, __arg3, __arg4, __arg5); \
+    register TYPEFY (arg1, __arg1) asm ("rdi") = ARGIFY (arg1);        \
+    register TYPEFY (arg2, __arg2) asm ("rsi") = ARGIFY (arg2); \
+    register TYPEFY (arg3, __arg3) asm ("rdx") = ARGIFY (arg3); \
+    register TYPEFY (arg4, __arg4) asm ("rcx") = ARGIFY (arg4); \
+    register TYPEFY (arg5, __arg5) asm ("r8") = ARGIFY (arg5); \
+    register long arg6 asm ("r9"); \
+    DO_TYPIFY_AND_CALL(__arg1, __arg2, __arg3, __arg4, __arg5, arg6, number); \
 })
 
 #undef internal_syscall6
 #define internal_syscall6(number, arg1, arg2, arg3, arg4, arg5, arg6) \
 ({									\
-    TYPEFY (arg6, __arg6) = ARGIFY (arg6);			 	\
-    TYPEFY (arg5, __arg5) = ARGIFY (arg5);			 	\
-    TYPEFY (arg4, __arg4) = ARGIFY (arg4);			 	\
-    TYPEFY (arg3, __arg3) = ARGIFY (arg3);			 	\
-    TYPEFY (arg2, __arg2) = ARGIFY (arg2);			 	\
-    TYPEFY (arg1, __arg1) = ARGIFY (arg1);			 	\
-    long int (**fn)(long, long, long, long, long, long) = SYSTBL_NR_ADDR(number);  \
-    (*fn)(__arg1, __arg2, __arg3, __arg4, __arg5, __arg6); \
-  })
-
+    register TYPEFY (arg1, __arg1) asm ("rdi") = ARGIFY (arg1);        \
+    register TYPEFY (arg2, __arg2) asm ("rsi") = ARGIFY (arg2); \
+    register TYPEFY (arg3, __arg3) asm ("rdx") = ARGIFY (arg3); \
+    register TYPEFY (arg4, __arg4) asm ("rcx") = ARGIFY (arg4); \
+    register TYPEFY (arg5, __arg5) asm ("r8") = ARGIFY (arg5); \
+    register TYPEFY (arg6, __arg6) asm ("r9") = ARGIFY (arg6); \
+    DO_TYPIFY_AND_CALL(__arg1, __arg2, __arg3, __arg4, __arg5, __arg6, number); \
+})
 
 # define VDSO_NAME  "LINUX_2.6"
 # define VDSO_HASH  61765110

@@ -55,8 +55,9 @@ ENTRY (__clone3)
 	   wrong.  */
 	cfi_endproc
 
+	movl    $SYS_ify(clone3), %eax
 	sub $0x8, %rsp
-	call *(SYSTBL_NAME_ADDR(clone3))
+	JCALL_PRESERVE
 
 	test	%RAX_LP, %RAX_LP
 	jl	SYSCALL_ERROR_LABEL
@@ -80,7 +81,9 @@ L(thread_start):
 	movq	%rax, %rdi
 
 	and	$-16, %RSP_LP
-	call *(SYSTBL_NAME_ADDR(exit))
+	subq $8, %rsp
+	push $SYS_ify(exit)
+	JCALL_NOPRESERVE
 
 	cfi_endproc
 

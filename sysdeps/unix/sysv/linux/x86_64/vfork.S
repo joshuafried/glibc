@@ -33,9 +33,8 @@ ENTRY (__vfork)
 	cfi_adjust_cfa_offset(-8)
 	cfi_register(%rip, %rdi)
 
-	/* Stuff the syscall number in RAX and enter into the kernel.  */
-	movl	$SYS_ify (vfork), %eax
-	syscall
+	movl    $SYS_ify(vfork),%eax
+	JCALL_SS_PRESERVE
 
 	/* Push back the return PC.  */
 	pushq	%rdi

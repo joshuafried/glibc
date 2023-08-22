@@ -73,14 +73,14 @@ ENTRY (__clone)
 	movq	%r8, %rdx
 	movq	%r9, %r8
 	mov	8(%rsp), %R10_LP
-	movl	$SYS_ify(clone),%eax
+	movl	$SYS_ify(clone), %eax
 
 	/* End FDE now, because in the child the unwind info will be
 	   wrong.  */
 	cfi_endproc;
 
-        sub $0x8, %rsp
-        call *(SYSTBL_NAME_ADDR(clone))
+	sub $0x8, %rsp
+	JCALL_PRESERVE
 
 	testq	%rax,%rax
 	jl	SYSCALL_ERROR_LABEL
@@ -104,8 +104,9 @@ L(thread_start):
 	call	*%rax
 	/* Call exit with return value from function call. */
 	movq	%rax, %rdi
-	movl	$SYS_ify(exit), %eax
-	syscall
+	subq $8, %rsp
+	push  $SYS_ify(exit)
+	JCALL_NOPRESERVE
 	cfi_endproc;
 
 	cfi_startproc;

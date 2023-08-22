@@ -27,25 +27,16 @@
 
 	.text
 ENTRY (syscall)
-	movq %rdi, %rax		/* Syscall number -> rax.  */
+	pushq %rdi 		/* Syscall number -> on stack.  */
 	movq %rsi, %rdi		/* shift arg1 - arg5.  */
 	movq %rdx, %rsi
 	movq %rcx, %rdx
 	movq %r8, %rcx
 	movq %r9, %r8
-	movq 8(%rsp),%r9	/* arg6 is on the stack.  */
+	movq 16(%rsp),%r9	/* arg6 is on the stack.  */
 
-	pushq %r15 // will use a callee-saved register (r15) to stash rsp
-        movq %rsp, %r15
-        andq $-16, %rsp // align the stack
-
-	shlq $3, %rax  	/* multiply syscall number by 8 */
-	addq $SYS_TBL_ADDR, %rax /* add table offset */
-	callq *(%rax) /* Do the system call.  */
-
-	// restore the stack
-        movq    %r15, %rsp
-        popq    %r15
+	JCALL_NOPRESERVE
+   addq $8, %rsp
 
 	cmpq $-4095, %rax	/* Check %rax for error.  */
 	jae SYSCALL_ERROR_LABEL	/* Jump to error handler if error.  */

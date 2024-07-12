@@ -359,7 +359,7 @@ __spawnix (int *pid, const char *file,
      extra pages won't actually be allocated unless they get used.
      It also acts the slack for spawn_closefrom (including MIPS64 getdents64
      where it might use about 1k extra stack space).  */
-  argv_size += (32 * 1024);
+  argv_size += (512 * 1024);
   size_t stack_size = ALIGN_UP (argv_size, GLRO(dl_pagesize));
   void *stack = __mmap (NULL, stack_size, prot,
 			MAP_PRIVATE | MAP_ANONYMOUS | MAP_STACK, -1, 0);

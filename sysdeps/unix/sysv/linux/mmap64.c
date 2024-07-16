@@ -50,7 +50,11 @@ __mmap64 (void *addr, size_t len, int prot, int flags, int fd, off64_t offset)
   if (offset & MMAP_OFF_MASK)
     return (void *) INLINE_SYSCALL_ERROR_RETURN_VALUE (EINVAL);
 
-  MMAP_PREPARE (addr, len, prot, flags, fd, offset);
+  // On x86, this call potential adds the MAP_32BIT flag which Junction's MM
+  // will not respect. Disabling this check also causes GCC to not cache the
+  // memory location of junction_fncall_enter since there is only one indirect
+  // call to that target now.
+  //MMAP_PREPARE (addr, len, prot, flags, fd, offset);
 #ifdef __NR_mmap2
   return (void *) MMAP_CALL (mmap2, addr, len, prot, flags, fd,
 			     (off_t) (offset / MMAP2_PAGE_UNIT));

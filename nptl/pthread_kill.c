@@ -21,6 +21,17 @@
 #include <pthreadP.h>
 #include <shlib-compat.h>
 
+// separate out system call functions to prevent GCC from caching address of
+// junction_fncall_enter.
+static int  __attribute__ ((noinline)) dotgkill(pid_t tgid, pid_t tid, int sig)
+{
+  return INTERNAL_SYSCALL_CALL (tgkill, tgid, tid, sig);
+}
+
+static pid_t __attribute__ ((noinline)) dogettid(void) {
+  return INTERNAL_SYSCALL_CALL (gettid);
+}
+
 /* Sends SIGNO to THREADID.  If the thread is about to exit or has
    already exited on the kernel side, return NO_TID.  Otherwise return
    0 or an error code. */
@@ -39,8 +50,8 @@ __pthread_kill_implementation (pthread_t threadid, int signo, int no_tid)
          delivery of all pending signals after unblocking in the code
          below.  POSIX only guarantees delivery of a single signal,
          which may not be the right one.)  */
-      pid_t tid = INTERNAL_SYSCALL_CALL (gettid);
-      int ret = INTERNAL_SYSCALL_CALL (tgkill, __getpid (), tid, signo);
+      pid_t tid = dogettid();
+      int ret = dotgkill ( __getpid (), tid, signo);
       return INTERNAL_SYSCALL_ERROR_P (ret) ? INTERNAL_SYSCALL_ERRNO (ret) : 0;
     }
 
@@ -59,7 +70,7 @@ __pthread_kill_implementation (pthread_t threadid, int signo, int no_tid)
     ret = no_tid;
   else
     {
-      ret = INTERNAL_SYSCALL_CALL (tgkill, __getpid (), pd->tid, signo);
+      ret = dotgkill ( __getpid (), pd->tid, signo);
       ret = INTERNAL_SYSCALL_ERROR_P (ret) ? INTERNAL_SYSCALL_ERRNO (ret) : 0;
     }
 

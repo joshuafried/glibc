@@ -107,21 +107,21 @@ elf/ldso_install:
 
 # Create links for shared libraries using the `ldconfig' program if possible.
 # Ignore the error if we cannot update /etc/ld.so.cache.
-ifeq (no,$(cross-compiling))
-ifeq (yes,$(build-shared))
-install:
-	-test ! -x $(elf-objpfx)ldconfig || LC_ALL=C \
-	  $(elf-objpfx)ldconfig $(addprefix -r ,$(install_root)) \
-				$(slibdir) $(libdir)
-ifneq (no,$(PERL))
-ifeq (/usr,$(prefix))
-ifeq (,$(install_root))
-	LD_SO=$(ld.so-version) CC="$(CC)" $(PERL) scripts/test-installation.pl $(common-objpfx)
-endif
-endif
-endif
-endif
-endif
+#ifeq (no,$(cross-compiling))
+#ifeq (yes,$(build-shared))
+#install:
+#	-test ! -x $(elf-objpfx)ldconfig || LC_ALL=C 
+#	  $(elf-objpfx)ldconfig $(addprefix -r ,$(install_root)) \
+#				$(slibdir) $(libdir)
+#ifneq (no,$(PERL))
+#ifeq (/usr,$(prefix))
+#ifeq (,$(install_root))
+#	LD_SO=$(ld.so-version) CC="$(CC)" $(PERL) scripts/test-installation.pl $(common-objpfx)
+#endif
+#endif
+#endif
+#endif
+#endif
 
 # Build subdirectory lib objects.
 lib-noranlib: subdir_lib
